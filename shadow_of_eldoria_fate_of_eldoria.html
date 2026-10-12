@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Shadow of Eldoria: Fate of Eldoria</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fantasy: {
+                            bg: '#0B0D13',
+                            panel: '#151922',
+                            border: '#2E3545',
+                            gold: '#FFD700',
+                            goldDark: '#B8860B',
+                            crimson: '#8B0000',
+                            mana: '#2563EB',
+                            health: '#DC2626',
+                            xp: '#9333EA'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Kanit', 'Prompt', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            font-family: 'Kanit', sans-serif;
+        }
+        body {
+            background-color: #050608;
+            color: #E2E8F0;
+            overflow: hidden;
+        }
+        .pixel-border {
+            border: 2px solid #3B4252;
+            box-shadow: 0 0 10px rgba(0,0,0,0.7), inset 0 0 15px rgba(0,0,0,0.5);
+        }
+        .gold-border {
+            border: 2px solid #D97706;
+            box-shadow: 0 0 10px rgba(217, 119, 6, 0.3);
+        }
+        .glow-gold {
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+        }
+        .pixelated {
+            image-rendering: pixelated;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B0D13;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2E3545;
+            border-radius: 2px;
+        }
+        .active-tab {
+            border-bottom: 3px solid #F59E0B;
+            color: #F59E0B;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        @keyframes pulse-light {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-light 2s infinite;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between bg-fantasy-bg text-gray-200 select-none overflow-hidden">
+
+    <div id="app" class="h-full w-full max-w-md mx-auto flex flex-col relative bg-fantasy-panel border-x border-fantasy-border overflow-hidden">
+        
+        <!-- TOP STATUS BAR (Game Info) -->
+        <header id="top-bar" class="hidden shrink-0 bg-gray-900 border-b border-fantasy-border p-2 text-xs flex justify-between items-center z-10">
+            <div class="flex items-center gap-2">
+                <div id="player-head-icon" class="w-8 h-8 rounded bg-gray-800 border border-fantasy-gold flex items-center justify-center overflow-hidden"></div>
+                <div>
+                    <div class="font-bold text-amber-400 text-sm leading-none" id="player-name-display">Hero</div>
+                    <div class="text-gray-400 text-[10px]" id="player-class-display">เผ่า / อาชีพ</div>
+                </div>
+            </div>
+            <div class="flex gap-3 text-right">
+                <div>
+                    <span class="text-yellow-400 font-bold">💰 <span id="gold-display">0</span>G</span>
+                </div>
+                <div>
+                    <span class="text-purple-400 font-bold">⭐ Lv.<span id="level-display">1</span></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN SCENE CONTAINER -->
+        <main id="main-content" class="flex-1 relative overflow-y-auto p-3 flex flex-col gap-3 pb-20">
+            <!-- Content will be injected dynamically -->
+        </main>
+
+        <!-- BOTTOM STICKY NAVIGATION BAR -->
+        <nav id="bottom-nav" class="hidden shrink-0 h-16 bg-gray-950 border-t border-fantasy-border grid grid-cols-5 text-center text-xs z-20">
+            <button onclick="switchTab('adventure')" id="nav-adventure" class="flex flex-col items-center justify-center p-1 active-tab">
+                <span class="text-lg">🗺️</span>
+                <span>ผจญภัย</span>
+            </button>
+            <button onclick="switchTab('hero')" id="nav-hero" class="flex flex-col items-center justify-center p-1 text-gray-400">
+                <span class="text-lg">👤</span>
+                <span>ฮีโร่</span>
+            </button>
+            <button onclick="switchTab('crafting')" id="nav-crafting" class="flex flex-col items-center justify-center p-1 text-gray-400">
+                <span class="text-lg">⚒️</span>
+                <span>สร้างของ</span>
+            </button>
+            <button onclick="switchTab('guild')" id="nav-guild" class="flex flex-col items-center justify-center p-1 text-gray-400 relative">
+                <span class="text-lg">🏛️</span>
+                <span>สมาคม</span>
+                <span id="guild-notice" class="hidden absolute top-1 right-3 w-2 h-2 rounded-full bg-red-500"></span>
+            </button>
+            <button onclick="switchTab('inventory')" id="nav-inventory" class="flex flex-col items-center justify-center p-1 text-gray-400">
+                <span class="text-lg">🎒</span>
+                <span>กระเป๋า</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- MODAL DIALOG CONTAINER -->
+    <div id="modal-container" class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 hidden">
+        <div id="modal-content" class="bg-fantasy-panel border-2 border-fantasy-gold rounded-lg p-4 w-full max-w-sm max-h-[85vh] overflow-y-auto relative text-sm">
+            <!-- Modal Content Inject -->
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API Synthesizer
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            play(type) {
+                if (!this.ctx) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'attack') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.linearRampToValueAtTime(40, now + 0.15);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'magic') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.linearRampToValueAtTime(1200, now + 0.25);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'heal') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(600, now + 0.3);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'victory') {
+                    const notes = [261, 329, 392, 523];
+                    notes.forEach((freq, i) => {
+                        const o = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        o.connect(g);
+                        g.connect(this.ctx.destination);
+                        o.frequency.setValueAtTime(freq, now + i * 0.1);
+                        g.gain.setValueAtTime(0.15, now + i * 0.1);
+                        g.gain.linearRampToValueAtTime(0.01, now + i * 0.1 + 0.15);
+                        o.start(now + i * 0.1);
+                        o.stop(now + i * 0.1 + 0.15);
+                    });
+                } else if (type === 'gameover') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.linearRampToValueAtTime(60, now + 0.5);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                }
+            }
+        };
+
+        // SOUND TRIGGER
+        function sfx(type) {
+            try { AudioFX.play(type); } catch (e) {}
+        }
+
+        const RACES = {
+            human: { name: 'มนุษย์', hpBonus: 10, mpBonus: 10, atkBonus: 2, defBonus: 2, color: '#F3C5A5', ears: 'round', horns: false, desc: 'เผ่าพันธุ์ที่มีความสมดุล ปรับตัวได้ดีในทุกสถานการณ์' },
+            elf: { name: 'เอลฟ์', hpBonus: 5, mpBonus: 25, atkBonus: 1, defBonus: 1, color: '#FFE0BD', ears: 'pointed', horns: false, desc: 'เชี่ยวชาญด้านเวทมนตร์ พลังมานาสูงลิ่ว' },
+            dwarf: { name: 'คนแคระ', hpBonus: 20, mpBonus: 0, atkBonus: 3, defBonus: 4, color: '#E0AC69', ears: 'round', horns: false, desc: 'ร่างกายแข็งแกร่ง ทนทาน และมีพลังโจมตีหนักแน่น' },
+            orc: { name: 'ออร์ค', hpBonus: 25, mpBonus: 0, atkBonus: 5, defBonus: 1, color: '#76A035', ears: 'pointed', horns: false, desc: 'นักรบสายเลือดเดือด พลังโจมตีกายภาพสูงมาก' },
+            dark_elf: { name: 'ดาร์กเอลฟ์', hpBonus: 5, mpBonus: 15, atkBonus: 4, defBonus: 0, color: '#6C5B7B', ears: 'pointed', horns: false, desc: 'ความเร็วและความเชี่ยวชาญมนตร์ดำอันตราย' },
+            dragonoid: { name: 'มังกรมนุษย์', hpBonus: 15, mpBonus: 10, atkBonus: 3, defBonus: 3, color: '#A0522D', ears: 'pointed', horns: true, desc: 'ทายาทแห่งมังกร มีเกราะธรรมชาติและสายเลือดศักดิ์สิทธิ์' }
+        };
+
+        const CLASSES = {
+            warrior: { name: 'นักรบ', baseHp: 100, baseMp: 30, atk: 12, def: 8, weapon: 'sword', icon: '⚔️', desc: 'เน้นการโจมตีกายภาพและพลังป้องกันสูง' },
+            mage: { name: 'จอมเวท', baseHp: 60, baseMp: 100, atk: 15, def: 3, weapon: 'staff', icon: '🔮', desc: 'ใช้มนตร์ทำลายล้างที่รุนแรง' },
+            rogue: { name: 'โจร', baseHp: 75, baseMp: 50, atk: 14, def: 4, weapon: 'dagger', icon: '🗡️', desc: 'ว่องไว คริติคอลสูง โจมตีจุดตาย' },
+            priest: { name: 'นักบวช', baseHp: 80, baseMp: 80, atk: 8, def: 6, weapon: 'mace', icon: '✨', desc: 'เยียวยาบาดแผลและมีสกิลสนับสนุนกล้าแกร่ง' }
+        };
+
+        const PROMOTIONS = {
+            warrior: [
+                { id: 'berserker', name: 'เบอร์เซิร์กเกอร์', atkMul: 1.5, defMul: 0.9, hpmul: 1.2, mpmul: 0.8, skill: { name: 'คำรามคลั่ง', mp: 20, pow: 2.2, desc: 'โจมตีรุนแรงมหาศาลด้วยความโกรธ' } },
+                { id: 'guardian', name: 'การ์เดียน', atkMul: 1.0, defMul: 1.6, hpmul: 1.4, mpmul: 1.0, skill: { name: 'โล่ศักดิ์สิทธิ์', mp: 15, pow: 1.2, heal: 20, desc: 'สร้างเกราะสะท้อนและฟื้นฟูเลือด' } },
+                { id: 'rune_knight', name: 'อัศวินรูน', atkMul: 1.3, defMul: 1.3, hpmul: 1.1, mpmul: 1.3, skill: { name: 'ดาบรูนอัคคี', mp: 25, pow: 1.8, desc: 'โจมตีกายภาพผสมเวทไฟ' } }
+            ],
+            mage: [
+                { id: 'elementalist', name: 'มหาจอมเวทธาตุ', atkMul: 1.6, defMul: 0.9, hpmul: 0.9, mpmul: 1.5, skill: { name: 'มหาอุกกาบาต', mp: 35, pow: 2.5, desc: 'เรียกอุกกาบาตทำลายล้างเป้าหมาย' } },
+                { id: 'necromancer', name: 'เนโครแมนเซอร์', atkMul: 1.4, defMul: 1.1, hpmul: 1.1, mpmul: 1.4, skill: { name: 'สูบวิญญาณ', mp: 25, pow: 1.5, lifesteal: 0.5, desc: 'สร้างความเสียหายและสูบเลือดมาเพิ่มให้ตนเอง' } },
+                { id: 'battlemage', name: 'เวทมนตร์สงคราม', atkMul: 1.3, defMul: 1.4, hpmul: 1.2, mpmul: 1.2, skill: { name: 'หมัดคาถาเวท', mp: 20, pow: 1.8, desc: 'การต่อสู้ระยะประชิดผสมผสานเวทมนตร์' } }
+            ],
+            rogue: [
+                { id: 'assassin', name: 'แอสแซสซิน', atkMul: 1.7, defMul: 0.8, hpmul: 0.9, mpmul: 1.0, skill: { name: 'สังหารเงียบ', mp: 25, pow: 2.4, desc: 'แทงจุดตายสร้างคริติคอลรุนแรง' } },
+                { id: 'shadow_stalker', name: 'ผู้แกะรอยเงา', atkMul: 1.4, defMul: 1.1, hpmul: 1.1, mpmul: 1.2, skill: { name: 'มีดสั้นไร้เงา', mp: 20, pow: 1.7, desc: 'โจมตีรวดเร็ว 2 ครั้งซ้อน' } },
+                { id: 'duelist', name: 'จอมดวลดาบ', atkMul: 1.4, defMul: 1.3, hpmul: 1.1, mpmul: 1.0, skill: { name: 'แทงสวนกลับ', mp: 15, pow: 1.6, desc: 'โจมตีอย่างแม่นยำและเพิ่มพลังป้องกัน' } }
+            ],
+            priest: [
+                { id: 'high_priest', name: 'มหาปรมาจารย์', atkMul: 1.1, defMul: 1.2, hpmul: 1.2, mpmul: 1.6, skill: { name: 'ปาฏิหาริย์แห่งแสง', mp: 30, pow: 1.0, healPercent: 0.6, desc: 'ฟื้นฟูพลังชีวิตอย่างมหาศาล' } },
+                { id: 'inquisitor', name: 'ภาคีไต่สวน', atkMul: 1.5, defMul: 1.1, hpmul: 1.1, mpmul: 1.2, skill: { name: 'ค้อนลงอาญา', mp: 22, pow: 2.0, desc: 'ฟาดพลังแสงศักดิ์สิทธิ์ลงโทษศัตรู' } },
+                { id: 'templar_monk', name: 'นักบวชแทมพลาร์', atkMul: 1.3, defMul: 1.5, hpmul: 1.3, mpmul: 1.1, skill: { name: 'เกราะมนตร์ศักดิ์สิทธิ์', mp: 20, pow: 1.4, healPercent: 0.2, desc: 'โจมตีศัตรูพร้อมฟื้นฟูเลือดบางส่วน' } }
+            ]
+        };
+
+        const RACIAL_SKILLS = {
+            human: [
+                { name: 'จิตวิญญาณปรับตัว', mp: 10, pow: 1.2, desc: 'โจมตีพร้อมเพิ่มพลังป้องกันเล็กน้อย' },
+                { name: 'ประกายแห่งหวัง', mp: 15, healPercent: 0.25, desc: 'ฟื้นฟู HP 25%' },
+                { name: 'พรแห่งเอลดอเรีย (Ult)', mp: 30, pow: 2.2, healPercent: 0.3, desc: 'ปลดปล่อยพลังเทพศักดิ์สิทธิ์ โจมตีแรงพร้อมฮีล' }
+            ],
+            elf: [
+                { name: 'ลูกศรพฤกษา', mp: 12, pow: 1.4, desc: 'ยิงศรมนตร์ธรรมชาติใส่ศัตรู' },
+                { name: 'สมาธิแห่งป่า', mp: 0, restoreMpPercent: 0.4, desc: 'ฟื้นฟู MP 40%' },
+                { name: 'จุติแห่งพฤกษา (Ult)', mp: 35, pow: 2.5, desc: 'เวททำลายล้างรุนแรงจากดวงดาว' }
+            ],
+            dwarf: [
+                { name: 'ทุบศิลา', mp: 10, pow: 1.5, desc: 'ฟาดกระแทกอย่างหนักแน่น' },
+                { name: 'ผิวเกราะเหล็ก', mp: 15, defBuff: 10, desc: 'เพิ่มพลังป้องกันในเทิร์นนี้' },
+                { name: 'โทสะแห่งภูผา (Ult)', mp: 25, pow: 2.3, desc: 'โจมตีกระแทกพื้นดินทำลายเกราะศัตรู' }
+            ],
+            orc: [
+                { name: 'ฟันโหดเหี้ยม', mp: 10, pow: 1.6, desc: 'ฟันศัตรูด้วยพลังกายล้วนๆ' },
+                { name: 'คำรามข่มขู่', mp: 12, pow: 1.2, desc: 'ขู่ขวัญศัตรูให้ลดพลังป้องกัน' },
+                { name: 'บ้าคลั่งโลหิต (Ult)', mp: 30, pow: 2.8, desc: 'โจมตีรุนแรงมากๆ แต่แลกกับความเสี่ยง' }
+            ],
+            dark_elf: [
+                { name: 'มีดสั้นอาบพิษ', mp: 12, pow: 1.5, desc: 'โจมตีด้วยพิษความมืด' },
+                { name: 'ก้าวไร้รอย', mp: 15, pow: 1.3, desc: 'พุ่งโจมตีอย่างรวดเร็ว' },
+                { name: 'ระเบิดเงามืด (Ult)', mp: 30, pow: 2.6, desc: 'ปลดปล่อยวงล้อมเวทเงาสังหาร' }
+            ],
+            dragonoid: [
+                { name: 'ลมหายใจมังกร', mp: 15, pow: 1.6, desc: 'พ่นไฟเผาผลาญศัตรู' },
+                { name: 'เกราะเกล็ดมังกร', mp: 15, healPercent: 0.15, defBuff: 8, desc: 'เพิ่มฟื้นฟูและเกราะป้องกัน' },
+                { name: 'จุติราชาแห่งมังกร (Ult)', mp: 35, pow: 2.7, desc: 'คำรามและพ่นเพลิงบริสุทธิ์ทำลายศัตรู' }
+            ]
+        };
+
+        const CRAFTING_RECIPES = [
+            { id: 'hp_potion_large', name: 'ยาเพิ่มพลังชีวิตระดับสูง', type: 'consumable', req: { herb: 3, slime_gel: 2 }, result: { item: 'ยา HP ใหญ่', desc: 'ฟื้นฟู HP 100 หน่วย' } },
+            { id: 'mp_potion_large', name: 'ยาเพิ่มมานาระดับสูง', type: 'consumable', req: { magic_flower: 3, slime_gel: 2 }, result: { item: 'ยา MP ใหญ่', desc: 'ฟื้นฟู MP 80 หน่วย' } },
+            { id: 'dragon_blade', name: 'ดาบเกล็ดมังกร', type: 'equipment', slot: 'weapon', req: { iron_ore: 5, dragonshell: 2 }, result: { item: 'ดาบเกล็ดมังกร', atk: 25, desc: 'ดาบคมกริบจากเกล็ดมังกร (+25 ATK)' } },
+            { id: 'shadow_armor', name: 'เกราะเงาทมิฬ', type: 'equipment', slot: 'armor', req: { shadow_essence: 3, iron_ore: 4 }, result: { item: 'เกราะเงาทมิฬ', def: 18, desc: 'เกราะเบาแต่แข็งแกร่ง (+18 DEF)' } },
+            { id: 'elemental_staff', name: 'คทาจอมเวทธาตุ', type: 'equipment', slot: 'weapon', req: { magic_flower: 5, shadow_essence: 2 }, result: { item: 'คทาจอมเวทธาตุ', atk: 30, desc: 'คทาสถิตพลังเวทมนตร์ (+30 ATK)' } }
+        ];
+
+        const MONSTERS = [
+            { name: 'สไลม์เขียว', hp: 45, maxHp: 45, atk: 8, def: 2, exp: 20, gold: 15, drops: { slime_gel: 0.8, herb: 0.5 }, svgType: 'slime' },
+            { name: 'สปอร์พิษ', hp: 60, maxHp: 60, atk: 12, def: 3, exp: 30, gold: 22, drops: { herb: 0.8, magic_flower: 0.4 }, svgType: 'plant' },
+            { name: 'โบลด์เหล็ก', hp: 90, maxHp: 90, atk: 18, def: 6, exp: 45, gold: 35, drops: { iron_ore: 0.7 }, svgType: 'goblin' },
+            { name: 'เงาพรายวิญญาณ', hp: 120, maxHp: 120, atk: 24, def: 5, exp: 65, gold: 50, drops: { shadow_essence: 0.6, magic_flower: 0.5 }, svgType: 'ghost' },
+            { name: 'แอสตารอท (มังกรไฟ)', hp: 220, maxHp: 220, atk: 35, def: 12, exp: 120, gold: 120, drops: { dragonshell: 0.8, iron_ore: 0.8 }, svgType: 'dragon' }
+        ];
+
+        // GAME STATE
+        let player = {
+            name: 'วีรบุรุษ',
+            race: 'human',
+            class: 'warrior',
+            promotedClass: null,
+            level: 1,
+            exp: 0,
+            maxExp: 50,
+            hp: 100,
+            maxHp: 100,
+            mp: 30,
+            maxMp: 30,
+            atk: 12,
+            def: 8,
+            gold: 50,
+            materials: { herb: 2, magic_flower: 1, slime_gel: 3, iron_ore: 0, shadow_essence: 0, dragonshell: 0 },
+            inventory: [],
+            equipped: { weapon: null, armor: null },
+            defending: false
+        };
+
+        let currentBattle = null;
+        let activeTab = 'adventure';
+
+        function getAvatarSVG(raceKey, classKey, isLarge = false) {
+            const race = RACES[raceKey] || RACES.human;
+            const size = isLarge ? 'w-28 h-28' : 'w-10 h-10';
+            
+            // Horns SVG part
+            const hornsSvg = race.horns ? `<path d="M 12 12 L 8 4 L 16 10 Z M 52 12 L 56 4 L 48 10 Z" fill="#D97706" />` : '';
+            
+            // Ears SVG part
+            const earsSvg = race.ears === 'pointed' ? `<path d="M 12 28 L 4 24 L 16 32 Z M 52 28 L 60 24 L 48 32 Z" fill="${race.color}" />` : `<circle cx="14" cy="30" r="4" fill="${race.color}" /><circle cx="50" cy="30" r="4" fill="${race.color}" />`;
+
+            // Weapon SVG part
+            let weaponSvg = '';
+            if (classKey === 'warrior') weaponSvg = `<path d="M 48 20 L 58 10 L 62 14 L 52 24 Z M 46 22 L 52 28" stroke="#CBD5E1" stroke-width="3" fill="none" />`;
+            else if (classKey === 'mage') weaponSvg = `<path d="M 50 40 L 56 12" stroke="#78350F" stroke-width="3" /><circle cx="56" cy="12" r="5" fill="#3B82F6" />`;
+            else if (classKey === 'rogue') weaponSvg = `<path d="M 48 30 L 58 20 L 54 18 Z" fill="#94A3B8" />`;
+            else if (classKey === 'priest') weaponSvg = `<path d="M 50 40 L 54 16" stroke="#78350F" stroke-width="3" /><circle cx="54" cy="16" r="6" fill="#F59E0B" />`;
+
+            return `
+            <svg class="${size} pixelated transition-all" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Shadow -->
+                <ellipse cx="32" cy="58" rx="20" ry="4" fill="#000" opacity="0.4" />
+                <!-- Ears -->
+                ${earsSvg}
+                <!-- Head -->
+                <rect x="20" y="18" width="24" height="24" rx="4" fill="${race.color}" />
+                <!-- Eyes -->
+                <rect x="26" y="26" width="3" height="5" fill="#1E293B" />
+                <rect x="35" y="26" width="3" height="5" fill="#1E293B" />
+                <!-- Horns -->
+                ${hornsSvg}
+                <!-- Body / Armor -->
+                <rect x="22" y="40" width="20" height="18" rx="2" fill="#334155" />
+                <rect x="26" y="42" width="12" height="14" fill="#475569" />
+                <!-- Weapon -->
+                ${weaponSvg}
+            </svg>`;
+        }
+
+        function getMonsterSVG(type) {
+            if (type === 'slime') {
+                return `<svg class="w-24 h-24 pixelated animate-bounce" viewBox="0 0 64 64"><path d="M 12 48 Q 8 24 32 20 Q 56 24 52 48 Q 32 56 12 48 Z" fill="#22C55E"/><circle cx="24" cy="36" r="3" fill="#FFF"/><circle cx="40" cy="36" r="3" fill="#FFF"/><circle cx="25" cy="36" r="1" fill="#000"/><circle cx="41" cy="36" r="1" fill="#000"/></svg>`;
+            } else if (type === 'plant') {
+                return `<svg class="w-24 h-24 pixelated" viewBox="0 0 64 64"><circle cx="32" cy="28" r="16" fill="#A855F7"/><path d="M 32 44 L 32 60 M 24 50 L 32 55 M 40 50 L 32 55" stroke="#15803D" stroke-width="4"/><circle cx="26" cy="26" r="2" fill="#000"/><circle cx="38" cy="26" r="2" fill="#000"/></svg>`;
+            } else if (type === 'goblin') {
+                return `<svg class="w-24 h-24 pixelated" viewBox="0 0 64 64"><rect x="20" y="20" width="24" height="24" fill="#65A30D"/><rect x="18" y="42" width="28" height="18" fill="#78350F"/><rect x="24" y="28" width="4" height="4" fill="#EF4444"/><rect x="36" y="28" width="4" height="4" fill="#EF4444"/></svg>`;
+            } else if (type === 'ghost') {
+                return `<svg class="w-24 h-24 pixelated opacity-80" viewBox="0 0 64 64"><path d="M 16 20 Q 32 8 48 20 L 48 52 L 40 44 L 32 52 L 24 44 L 16 52 Z" fill="#6366F1"/><circle cx="26" cy="26" r="3" fill="#000"/><circle cx="38" cy="26" r="3" fill="#000"/></svg>`;
+            } else {
+                return `<svg class="w-28 h-28 pixelated" viewBox="0 0 64 64"><path d="M 12 36 Q 32 10 52 36 L 44 56 L 20 56 Z" fill="#B91C1C"/><path d="M 8 20 L 20 30 L 12 40 Z M 56 20 L 44 30 L 52 40 Z" fill="#7F1D1D"/><circle cx="24" cy="32" r="3" fill="#F59E0B"/><circle cx="40" cy="32" r="3" fill="#F59E0B"/></svg>`;
+            }
+        }
+
+        window.onload = function() {
+            AudioFX.init();
+            loadGame();
+            if (!player.created) {
+                showCharacterCreation();
+            } else {
+                initMainUI();
+            }
+        };
+
+        function saveGame() {
+            localStorage.setItem('eldoria_player_save', JSON.stringify(player));
+        }
+
+        function loadGame() {
+            const save = localStorage.getItem('eldoria_player_save');
+            if (save) {
+                try {
+                    player = JSON.parse(save);
+                } catch(e) {}
+            }
+        }
+
+        function updateTopBar() {
+            if (!player.created) return;
+            document.getElementById('top-bar').classList.remove('hidden');
+            document.getElementById('bottom-nav').classList.remove('hidden');
+            document.getElementById('player-name-display').innerText = player.name;
+            
+            const className = player.promotedClass ? player.promotedClass.name : CLASSES[player.class].name;
+            document.getElementById('player-class-display').innerText = `${RACES[player.race].name} • ${className}`;
+            document.getElementById('gold-display').innerText = player.gold;
+            document.getElementById('level-display').innerText = player.level;
+            document.getElementById('player-head-icon').innerHTML = getAvatarSVG(player.race, player.class);
+
+            // Check promotion availability for notice
+            if (player.level >= 15 && !player.promotedClass) {
+                document.getElementById('guild-notice').classList.remove('hidden');
+            } else {
+                document.getElementById('guild-notice').classList.add('hidden');
+            }
+        }
+
+        function showCharacterCreation() {
+            const main = document.getElementById('main-content');
+            let selRace = 'human';
+            let selClass = 'warrior';
+
+            function renderCreation() {
+                main.innerHTML = `
+                    <div class="flex flex-col items-center gap-3">
+                        <h1 class="text-xl font-bold text-amber-400 glow-gold text-center">สร้างตัวละครตำนานแห่ง Eldoria</h1>
+                        
+                        <!-- Avatar Preview -->
+                        <div class="p-4 bg-gray-900 border-2 border-fantasy-gold rounded-lg flex flex-col items-center gap-2 w-full">
+                            <div id="avatar-preview-box">${getAvatarSVG(selRace, selClass, true)}</div>
+                            <input type="text" id="hero-name-input" placeholder="ตั้งชื่อฮีโร่ของคุณ" value="${player.name}" class="bg-gray-800 border border-gray-700 text-center px-3 py-1.5 rounded text-amber-300 font-bold w-full max-w-xs focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <!-- Race Selection -->
+                        <div class="w-full">
+                            <label class="block text-xs font-bold text-amber-400 mb-1">เลือกเผ่าพันธุ์ (Race)</label>
+                            <div class="grid grid-cols-3 gap-1.5 text-xs">
+                                ${Object.keys(RACES).map(r => `
+                                    <button onclick="selectRace('${r}')" class="p-2 border rounded text-center transition ${selRace === r ? 'bg-amber-600/30 border-amber-400 text-amber-300 font-bold' : 'bg-gray-900 border-gray-800 text-gray-400'}">
+                                        ${RACES[r].name}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <p class="text-[11px] text-gray-400 mt-1 italic">${RACES[selRace].desc}</p>
+                        </div>
+
+                        <!-- Class Selection -->
+                        <div class="w-full">
+                            <label class="block text-xs font-bold text-amber-400 mb-1">เลือกสายอาชีพ (Class)</label>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                ${Object.keys(CLASSES).map(c => `
+                                    <button onclick="selectClass('${c}')" class="p-2 border rounded flex items-center gap-2 transition ${selClass === c ? 'bg-amber-600/30 border-amber-400 text-amber-300 font-bold' : 'bg-gray-900 border-gray-800 text-gray-400'}">
+                                        <span class="text-base">${CLASSES[c].icon}</span>
+                                        <div class="text-left">
+                                            <div>${CLASSES[c].name}</div>
+                                        </div>
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <p class="text-[11px] text-gray-400 mt-1 italic">${CLASSES[selClass].desc}</p>
+                        </div>
+
+                        <button onclick="confirmCharacter()" class="w-full py-3 bg-gradient-to-r from-amber-600 to-yellow-500 text-black font-bold text-base rounded shadow-lg active:scale-95 transition mt-2">
+                            เริ่มผจญภัยใน Eldoria
+                        </button>
+                    </div>
+                `;
+            }
+
+            window.selectRace = function(r) {
+                sfx('click');
+                selRace = r;
+                renderCreation();
+            };
+
+            window.selectClass = function(c) {
+                sfx('click');
+                selClass = c;
+                renderCreation();
+            };
+
+            window.confirmCharacter = function() {
+                sfx('victory');
+                const nameInput = document.getElementById('hero-name-input').value.trim();
+                player.name = nameInput || 'วีรบุรุษไร้นาม';
+                player.race = selRace;
+                player.class = selClass;
+                
+                // Recalculate Base Stats
+                const raceData = RACES[selRace];
+                const classData = CLASSES[selClass];
+
+                player.maxHp = classData.baseHp + raceData.hpBonus;
+                player.hp = player.maxHp;
+                player.maxMp = classData.baseMp + raceData.mpBonus;
+                player.mp = player.maxMp;
+                player.atk = classData.atk + raceData.atkBonus;
+                player.def = classData.def + raceData.defBonus;
+                player.created = true;
+
+                saveGame();
+                initMainUI();
+            };
+
+            renderCreation();
+        }
+
+        function initMainUI() {
+            updateTopBar();
+            switchTab('adventure');
+        }
+
+        function switchTab(tab) {
+            sfx('click');
+            activeTab = tab;
+            
+            // Highlight active navigation tab button
+            ['adventure', 'hero', 'crafting', 'guild', 'inventory'].forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                if (t === tab) {
+                    btn.className = 'flex flex-col items-center justify-center p-1 active-tab';
+                } else {
+                    btn.className = 'flex flex-col items-center justify-center p-1 text-gray-400';
+                }
+            });
+
+            const main = document.getElementById('main-content');
+            if (tab === 'adventure') renderAdventureTab(main);
+            else if (tab === 'hero') renderHeroTab(main);
+            else if (tab === 'crafting') renderCraftingTab(main);
+            else if (tab === 'guild') renderGuildTab(main);
+            else if (tab === 'inventory') renderInventoryTab(main);
+        }
+
+        function renderAdventureTab(container) {
+            if (currentBattle) {
+                renderBattleUI(container);
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="flex flex-col h-full justify-between gap-3">
+                    <!-- Banner -->
+                    <div class="p-4 bg-gradient-to-b from-gray-900 to-fantasy-panel border border-fantasy-border rounded-lg text-center relative overflow-hidden">
+                        <div class="text-amber-400 text-xs font-bold uppercase tracking-widest mb-1">ดินแดนแห่งเงามืด</div>
+                        <h2 class="text-xl font-bold text-gray-100">ป่าทมิฬเอลดอเรีย</h2>
+                        <p class="text-xs text-gray-400 mt-1">ออกสำรวจเพื่อค้นหาสมบัติ สู้กับมอนสเตอร์ หรือเผชิญหน้ากับเหตุการณ์สุ่ม!</p>
+                    </div>
+
+                    <!-- Adventure Action Area -->
+                    <div class="flex-1 flex flex-col justify-center items-center p-6 bg-gray-900/50 border border-fantasy-border rounded-lg text-center">
+                        <div class="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-4xl mb-4 animate-pulse-slow">
+                            ⚔️
+                        </div>
+                        <h3 class="text-base font-bold text-amber-300">พร้อมเดินหน้าต่อหรือไม่?</h3>
+                        <p class="text-xs text-gray-400 mt-1 max-w-xs">ทุกการก้าวเดินอาจพบศัตรูร้าย ศิลาโบราณ หรือหีบสมบัติลึกลับ</p>
+                    </div>
+
+                    <!-- Explore Button -->
+                    <button onclick="triggerExplore()" class="w-full py-4 bg-gradient-to-r from-red-800 via-amber-600 to-red-800 text-amber-100 font-bold text-lg rounded-lg shadow-lg border border-amber-500/50 active:scale-95 transition flex items-center justify-center gap-2">
+                        <span>🧭</span>
+                        <span>เดินสำรวจดันเจี้ยน</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        function triggerExplore() {
+            sfx('click');
+            const rand = Math.random();
+            
+            // 35% Chance for Random Dungeon Event
+            if (rand < 0.35) {
+                triggerRandomEvent();
+            } else {
+                // Spawn Battle
+                startBattle();
+            }
+        }
+
+        function triggerRandomEvent() {
+            const events = ['shrine', 'chest', 'fountain', 'ambush'];
+            const ev = events[Math.floor(Math.random() * events.length)];
+
+            if (ev === 'shrine') {
+                showModal(`
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">🗿</div>
+                        <h3 class="text-base font-bold text-amber-400 mb-2">ศิลาโบราณศักดิ์สิทธิ์</h3>
+                        <p class="text-xs text-gray-300 mb-4">คุณพบศิลาโบราณส่องแสงสว่างไสว เลือกรับพรเพื่อเพิ่มค่าสถานะถาวร!</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <button onclick="applyBuff('atk')" class="p-2 bg-gray-800 border border-amber-500/50 rounded text-amber-300 font-bold">+2 ATK ถาวร</button>
+                            <button onclick="applyBuff('def')" class="p-2 bg-gray-800 border border-amber-500/50 rounded text-amber-300 font-bold">+2 DEF ถาวร</button>
+                            <button onclick="applyBuff('hp')" class="p-2 bg-gray-800 border border-amber-500/50 rounded text-amber-300 font-bold">+15 Max HP</button>
+                            <button onclick="applyBuff('mp')" class="p-2 bg-gray-800 border border-amber-500/50 rounded text-amber-300 font-bold">+10 Max MP</button>
+                        </div>
+                    </div>
+                `);
+            } else if (ev === 'chest') {
+                showModal(`
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">🎁</div>
+                        <h3 class="text-base font-bold text-amber-400 mb-2">หีบสมบัติลึกลับ</h3>
+                        <p class="text-xs text-gray-300 mb-4">คุณพบหีบสมบัติเก่าแก่ คุณจะเสี่ยงเปิดมันหรือไม่?</p>
+                        <div class="flex gap-2">
+                            <button onclick="openChest()" class="flex-1 py-2 bg-amber-600 text-black font-bold rounded">เปิดหีบ</button>
+                            <button onclick="closeModal()" class="flex-1 py-2 bg-gray-800 text-gray-300 rounded">เดินผ่านไป</button>
+                        </div>
+                    </div>
+                `);
+            } else if (ev === 'fountain') {
+                sfx('heal');
+                player.hp = player.maxHp;
+                player.mp = player.maxMp;
+                saveGame();
+                showModal(`
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">⛲</div>
+                        <h3 class="text-base font-bold text-blue-400 mb-2">น้ำพุศักดิ์สิทธิ์</h3>
+                        <p class="text-xs text-gray-300 mb-4">คุณได้ดื่มน้ำพุอันบริสุทธิ์ พลังชีวิต (HP) และมานา (MP) ฟื้นฟูเต็มสมบูรณ์!</p>
+                        <button onclick="closeModal()" class="w-full py-2 bg-blue-600 text-white font-bold rounded">ตกลง</button>
+                    </div>
+                `);
+            } else if (ev === 'ambush') {
+                showModal(`
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">⚠️</div>
+                        <h3 class="text-base font-bold text-red-500 mb-2">รังมอนสเตอร์ซุ่มโจมตี!</h3>
+                        <p class="text-xs text-gray-300 mb-4">ศัตรูพุ่งออกมาจากเงามืดอย่างรวดเร็ว!</p>
+                        <button onclick="closeModal(); startBattle();" class="w-full py-2 bg-red-600 text-white font-bold rounded">เข้าสู่การต่อสู้!</button>
+                    </div>
+                `);
+            }
+        }
+
+        window.applyBuff = function(type) {
+            sfx('heal');
+            if (type === 'atk') player.atk += 2;
+            else if (type === 'def') player.def += 2;
+            else if (type === 'hp') { player.maxHp += 15; player.hp += 15; }
+            else if (type === 'mp') { player.maxMp += 10; player.mp += 10; }
+            saveGame();
+            closeModal();
+            renderAdventureTab(document.getElementById('main-content'));
+        };
+
+        window.openChest = function() {
+            if (Math.random() < 0.3) {
+                // Mimic
+                showModal(`
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">👾</div>
+                        <h3 class="text-base font-bold text-red-500 mb-2">กับดัก! กล่องกลืนวิญญาณ (Mimic)</h3>
+                        <p class="text-xs text-gray-300 mb-4">หีบสมบัตินี้เป็นมอนสเตอร์ปลอมแปลง!</p>
+                        <button onclick="closeModal(); startBattle(true);" class="w-full py-2 bg-red-600 text-white font-bold rounded">ต่อสู้!</button>
+                    </div>
+                `);
+            } else {
+                // Rewards
+                sfx('victory');
+                const goldEarned = Math.floor(Math.random() * 40) + 20;
+                player.gold += goldEarned;
+                player.materials.iron_ore = (player.materials.iron_ore || 0) + 1;
+                saveGame();
+                showModal(`
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">💰</div>
+                        <h3 class="text-base font-bold text-yellow-400 mb-2">เปิดหีบสำเร็จ!</h3>
+                        <p class="text-xs text-gray-300 mb-4">คุณได้รับ <strong>${goldEarned} Gold</strong> และ <strong>แร่เหล็ก x1</strong></p>
+                        <button onclick="closeModal()" class="w-full py-2 bg-amber-600 text-black font-bold rounded">รับของรางวัล</button>
+                    </div>
+                `);
+            }
+        };
+
+        function startBattle(isMimic = false) {
+            let mData = MONSTERS[Math.floor(Math.random() * (MONSTERS.length - 1))];
+            if (isMimic) {
+                mData = { name: 'กล่องมิมิก', hp: 100, maxHp: 100, atk: 20, def: 5, exp: 50, gold: 60, drops: { iron_ore: 1 }, svgType: 'goblin' };
+            }
+
+            currentBattle = {
+                monster: JSON.parse(JSON.stringify(mData)),
+                log: [`เผชิญหน้ากับ ${mData.name}!`]
+            };
+
+            renderBattleUI(document.getElementById('main-content'));
+        }
+
+        function renderBattleUI(container) {
+            const m = currentBattle.monster;
+            const mHpPercent = Math.max(0, Math.floor((m.hp / m.maxHp) * 100));
+            const pHpPercent = Math.max(0, Math.floor((player.hp / player.maxHp) * 100));
+            const pMpPercent = Math.max(0, Math.floor((player.mp / player.maxMp) * 100));
+
+            const racialSkillList = RACIAL_SKILLS[player.race];
+            const activeProm = player.promotedClass;
+
+            container.innerHTML = `
+                <div class="flex flex-col h-full justify-between gap-2">
+                    <!-- Monster Display Area -->
+                    <div class="p-3 bg-gray-900 border border-red-900/50 rounded-lg flex flex-col items-center relative">
+                        <div class="text-red-400 font-bold text-sm mb-1">${m.name}</div>
+                        <!-- Monster Health Bar -->
+                        <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden border border-gray-700 mb-2">
+                            <div class="bg-red-600 h-full transition-all duration-300" style="width: ${mHpPercent}%"></div>
+                        </div>
+                        <div class="text-[10px] text-gray-400 mb-1">HP: ${m.hp} / ${m.maxHp}</div>
+                        
+                        <!-- Monster Dynamic SVG -->
+                        ${getMonsterSVG(m.svgType)}
+                    </div>
+
+                    <!-- Battle Combat Log -->
+                    <div id="battle-log" class="h-20 bg-black/60 border border-gray-800 rounded p-2 text-[11px] overflow-y-auto text-gray-300 flex flex-col gap-1">
+                        ${currentBattle.log.map(l => `<div>• ${l}</div>`).join('')}
+                    </div>
+
+                    <!-- Player Health & Mana Status -->
+                    <div class="p-2 bg-gray-900 border border-fantasy-border rounded-lg text-xs">
+                        <div class="flex justify-between text-gray-300 mb-1 font-bold">
+                            <span>${player.name}</span>
+                            <span>HP: ${player.hp}/${player.maxHp} | MP: ${player.mp}/${player.maxMp}</span>
+                        </div>
+                        <!-- Player HP Bar -->
+                        <div class="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden border border-gray-700 mb-1">
+                            <div class="bg-green-600 h-full transition-all duration-300" style="width: ${pHpPercent}%"></div>
+                        </div>
+                        <!-- Player MP Bar -->
+                        <div class="w-full bg-gray-800 h-2 rounded-full overflow-hidden border border-gray-700">
+                            <div class="bg-blue-600 h-full transition-all duration-300" style="width: ${pMpPercent}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- COMBAT ACTION BUTTONS (0-MP Actions + Skills) -->
+                    <div class="flex flex-col gap-1 text-xs">
+                        <!-- 0-MP Basic Actions -->
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="executeAction('attack')" class="p-2 bg-red-900/80 hover:bg-red-800 border border-red-600 rounded text-red-200 font-bold active:scale-95 transition flex items-center justify-center gap-1">
+                                <span>⚔️</span> โจมตี
+                            </button>
+                            <button onclick="executeAction('defend')" class="p-2 bg-blue-900/80 hover:bg-blue-800 border border-blue-600 rounded text-blue-200 font-bold active:scale-95 transition flex items-center justify-center gap-1">
+                                <span>🛡️</span> ป้องกัน
+                            </button>
+                            <button onclick="executeAction('meditate')" class="p-2 bg-purple-900/80 hover:bg-purple-800 border border-purple-600 rounded text-purple-200 font-bold active:scale-95 transition flex items-center justify-center gap-1">
+                                <span>🧘</span> สมาธิ
+                            </button>
+                        </div>
+
+                        <!-- Special Skills Row -->
+                        <div class="grid grid-cols-2 gap-1.5 mt-1">
+                            <!-- Racial Skill -->
+                            <button onclick="executeAction('racial')" class="p-2 bg-amber-900/80 hover:bg-amber-800 border border-amber-600 rounded text-amber-200 font-bold text-left active:scale-95 transition">
+                                <div class="text-[10px] text-amber-400">🧬 สกิลเผ่า (${racialSkillList[0].mp} MP)</div>
+                                <div class="truncate">${racialSkillList[0].name}</div>
+                            </button>
+
+                            <!-- Promotion / Class Skill -->
+                            ${activeProm ? `
+                                <button onclick="executeAction('promotion')" class="p-2 bg-yellow-900/80 hover:bg-yellow-800 border border-yellow-500 rounded text-yellow-200 font-bold text-left active:scale-95 transition">
+                                    <div class="text-[10px] text-yellow-400">🌟 สกิลไฮคลาส (${activeProm.skill.mp} MP)</div>
+                                    <div class="truncate">${activeProm.skill.name}</div>
+                                </button>
+                            ` : `
+                                <button onclick="executeAction('racial_2')" class="p-2 bg-amber-900/80 hover:bg-amber-800 border border-amber-600 rounded text-amber-200 font-bold text-left active:scale-95 transition">
+                                    <div class="text-[10px] text-amber-400">🧬 สกิลเผ่า 2 (${racialSkillList[1].mp} MP)</div>
+                                    <div class="truncate">${racialSkillList[1].name}</div>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Auto scroll battle log
+            const logBox = document.getElementById('battle-log');
+            if (logBox) logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function executeAction(action) {
+            if (!currentBattle) return;
+            const m = currentBattle.monster;
+            player.defending = false;
+
+            let logMsg = '';
+
+            if (action === 'attack') {
+                sfx('attack');
+                const dmg = Math.max(1, player.atk - m.def + Math.floor(Math.random() * 4));
+                m.hp -= dmg;
+                logMsg = `คุณโจมตี ${m.name} สร้างความเสียหาย ${dmg} หน่วย`;
+            } else if (action === 'defend') {
+                sfx('click');
+                player.defending = true;
+                logMsg = `คุณตั้งการ์ดป้องกัน ลดความเสียหายในเทิร์นถัดไป 50%`;
+            } else if (action === 'meditate') {
+                sfx('heal');
+                const restored = Math.floor(player.maxMp * 0.2);
+                player.mp = Math.min(player.maxMp, player.mp + restored);
+                logMsg = `คุณนั่งสมาธิ ฟื้นฟู MP ${restored} หน่วย`;
+            } else if (action === 'racial' || action === 'racial_2') {
+                const skIdx = action === 'racial' ? 0 : 1;
+                const sk = RACIAL_SKILLS[player.race][skIdx];
+                if (player.mp < sk.mp) {
+                    currentBattle.log.push(`MP ไม่พอสำหรับใช้ ${sk.name}!`);
+                    renderBattleUI(document.getElementById('main-content'));
+                    return;
+                }
+                sfx('magic');
+                player.mp -= sk.mp;
+                if (sk.pow) {
+                    const dmg = Math.max(1, Math.floor(player.atk * sk.pow) - m.def);
+                    m.hp -= dmg;
+                    logMsg = `คุณใช้ [${sk.name}] ใส่ ${m.name} สร้างความเสียหาย ${dmg} หน่วย`;
+                }
+                if (sk.healPercent) {
+                    const h = Math.floor(player.maxHp * sk.healPercent);
+                    player.hp = Math.min(player.maxHp, player.hp + h);
+                    logMsg += ` และฟื้นฟู HP ${h} หน่วย`;
+                }
+                if (sk.restoreMpPercent) {
+                    const rMp = Math.floor(player.maxMp * sk.restoreMpPercent);
+                    player.mp = Math.min(player.maxMp, player.mp + rMp);
+                    logMsg = `คุณใช้ [${sk.name}] ฟื้นฟู MP ${rMp} หน่วย`;
+                }
+            } else if (action === 'promotion') {
+                const sk = player.promotedClass.skill;
+                if (player.mp < sk.mp) {
+                    currentBattle.log.push(`MP ไม่พอสำหรับใช้ ${sk.name}!`);
+                    renderBattleUI(document.getElementById('main-content'));
+                    return;
+                }
+                sfx('magic');
+                player.mp -= sk.mp;
+                const dmg = Math.max(1, Math.floor(player.atk * sk.pow) - m.def);
+                m.hp -= dmg;
+                logMsg = `คุณใช้ท่าไม้ตาย [${sk.name}] ใส่ ${m.name} สร้างความเสียหาย ${dmg} หน่วย!`;
+
+                if (sk.lifesteal) {
+                    const steal = Math.floor(dmg * sk.lifesteal);
+                    player.hp = Math.min(player.maxHp, player.hp + steal);
+                    logMsg += ` (สูบเลือด ${steal} HP)`;
+                }
+                if (sk.healPercent) {
+                    const h = Math.floor(player.maxHp * sk.healPercent);
+                    player.hp = Math.min(player.maxHp, player.hp + h);
+                    logMsg += ` (ฟื้นฟู ${h} HP)`;
+                }
+            }
+
+            currentBattle.log.push(logMsg);
+
+            // Check Monster Death
+            if (m.hp <= 0) {
+                m.hp = 0;
+                sfx('victory');
+                player.gold += m.gold;
+                player.exp += m.exp;
+
+                // Handle Material Drops
+                let dropMsg = '';
+                if (m.drops) {
+                    Object.keys(m.drops).forEach(mat => {
+                        if (Math.random() <= m.drops[mat]) {
+                            player.materials[mat] = (player.materials[mat] || 0) + 1;
+                            dropMsg += ` ได้รับ ${mat} x1!`;
+                        }
+                    });
+                }
+
+                currentBattle.log.push(`ชนะการต่อสู้! ได้รับ ${m.gold}G และ ${m.exp} EXP!${dropMsg}`);
+
+                // Check Level Up
+                checkLevelUp();
+                saveGame();
+                updateTopBar();
+
+                setTimeout(() => {
+                    currentBattle = null;
+                    renderAdventureTab(document.getElementById('main-content'));
+                }, 1800);
+                return;
+            }
+
+            // Enemy Turn Attack
+            setTimeout(() => {
+                let mDmg = Math.max(1, m.atk - player.def + Math.floor(Math.random() * 3));
+                if (player.defending) mDmg = Math.max(1, Math.floor(mDmg * 0.5));
+
+                player.hp -= mDmg;
+                sfx('attack');
+                currentBattle.log.push(`${m.name} โจมตีคุณ สร้างความเสียหาย ${mDmg} หน่วย`);
+
+                if (player.hp <= 0) {
+                    player.hp = 0;
+                    sfx('gameover');
+                    currentBattle.log.push(`คุณถูกพ่ายแพ้...`);
+                    saveGame();
+                    setTimeout(() => {
+                        showGameOverModal();
+                    }, 1200);
+                }
+
+                renderBattleUI(document.getElementById('main-content'));
+            }, 600);
+
+            renderBattleUI(document.getElementById('main-content'));
+        }
+
+        function checkLevelUp() {
+            if (player.exp >= player.maxExp) {
+                player.level += 1;
+                player.exp -= player.maxExp;
+                player.maxExp = Math.floor(player.maxExp * 1.4);
+                player.maxHp += 15;
+                player.hp = player.maxHp;
+                player.maxMp += 10;
+                player.mp = player.maxMp;
+                player.atk += 3;
+                player.def += 2;
+                currentBattle.log.push(`🌟 เลเวลอัปเป็น Lv.${player.level}! ค่าสถานะเพิ่มขึ้น!`);
+            }
+        }
+
+        function showGameOverModal() {
+            showModal(`
+                <div class="text-center">
+                    <div class="text-4xl mb-2">💀</div>
+                    <h3 class="text-lg font-bold text-red-600 mb-2">พ่ายแพ้ในดันเจี้ยน</h3>
+                    <p class="text-xs text-gray-300 mb-4">ร่างของคุณถูกนำกลับมาฟื้นฟูที่เมืองหลวง ปลอดภัยแล้ว!</p>
+                    <button onclick="revivePlayer()" class="w-full py-2 bg-amber-600 text-black font-bold rounded">ฟื้นคืนชีพ (HP/MP เต็ม)</button>
+                </div>
+            `);
+        }
+
+        window.revivePlayer = function() {
+            player.hp = player.maxHp;
+            player.mp = player.maxMp;
+            currentBattle = null;
+            saveGame();
+            closeModal();
+            switchTab('adventure');
+        };
+
+        function renderHeroTab(container) {
+            const rData = RACES[player.race];
+            const cData = CLASSES[player.class];
+            const pData = player.promotedClass;
+
+            const rSkills = RACIAL_SKILLS[player.race];
+
+            container.innerHTML = `
+                <div class="flex flex-col gap-3">
+                    <!-- Hero Card -->
+                    <div class="p-4 bg-gray-900 border border-fantasy-gold rounded-lg flex items-center gap-4">
+                        <div>${getAvatarSVG(player.race, player.class, true)}</div>
+                        <div>
+                            <h3 class="text-lg font-bold text-amber-400">${player.name}</h3>
+                            <div class="text-xs text-gray-300">${rData.name} • ${pData ? pData.name : cData.name}</div>
+                            <div class="text-xs text-purple-400 font-bold mt-1">เลเวล ${player.level} (EXP: ${player.exp}/${player.maxExp})</div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="p-2.5 bg-gray-900 border border-gray-800 rounded">
+                            <span class="text-gray-400">พลังชีวิต (HP):</span>
+                            <div class="font-bold text-green-400 text-sm">${player.hp} / ${player.maxHp}</div>
+                        </div>
+                        <div class="p-2.5 bg-gray-900 border border-gray-800 rounded">
+                            <span class="text-gray-400">มานา (MP):</span>
+                            <div class="font-bold text-blue-400 text-sm">${player.mp} / ${player.maxMp}</div>
+                        </div>
+                        <div class="p-2.5 bg-gray-900 border border-gray-800 rounded">
+                            <span class="text-gray-400">พลังโจมตี (ATK):</span>
+                            <div class="font-bold text-red-400 text-sm">${player.atk}</div>
+                        </div>
+                        <div class="p-2.5 bg-gray-900 border border-gray-800 rounded">
+                            <span class="text-gray-400">พลังป้องกัน (DEF):</span>
+                            <div class="font-bold text-yellow-400 text-sm">${player.def}</div>
+                        </div>
+                    </div>
+
+                    <!-- Skill Book -->
+                    <div class="bg-gray-900 border border-fantasy-border rounded-lg p-3">
+                        <h4 class="text-xs font-bold text-amber-400 mb-2 border-b border-gray-800 pb-1">🧬 สกิลประจำเผ่าพันธุ์ (${rData.name})</h4>
+                        <div class="flex flex-col gap-2">
+                            ${rSkills.map((sk, idx) => `
+                                <div class="p-2 bg-gray-950 border border-gray-800 rounded text-xs flex justify-between items-center">
+                                    <div>
+                                        <div class="font-bold text-amber-200">${sk.name} ${idx === 2 ? '<span class="text-[10px] text-purple-400 font-normal">(ปลดล็อก Lv.20)</span>' : ''}</div>
+                                        <div class="text-[10px] text-gray-400">${sk.desc}</div>
+                                    </div>
+                                    <div class="text-blue-400 text-[10px] font-bold">${sk.mp} MP</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCraftingTab(container) {
+            container.innerHTML = `
+                <div class="flex flex-col gap-3">
+                    <div class="p-3 bg-gray-900 border border-fantasy-border rounded-lg text-center">
+                        <h3 class="text-base font-bold text-amber-400">⚒️ โรงตีเหล็กและคลังปรุงยา</h3>
+                        <p class="text-xs text-gray-400">คราฟต์ไอเทมและอุปกรณ์ระดับสูงจากวัตถุดิบมอนสเตอร์</p>
+                    </div>
+
+                    <!-- Material Inventory -->
+                    <div class="p-3 bg-gray-900 border border-gray-800 rounded-lg">
+                        <h4 class="text-xs font-bold text-amber-300 mb-2">📦 คลังวัตถุดิบที่คุณมี:</h4>
+                        <div class="grid grid-cols-3 gap-2 text-[11px]">
+                            <div class="p-1.5 bg-gray-950 rounded border border-gray-800 text-center">🌿 สมุนไพร: <span class="text-green-400 font-bold">${player.materials.herb || 0}</span></div>
+                            <div class="p-1.5 bg-gray-950 rounded border border-gray-800 text-center">🌸 ดอกไม้เวท: <span class="text-blue-400 font-bold">${player.materials.magic_flower || 0}</span></div>
+                            <div class="p-1.5 bg-gray-950 rounded border border-gray-800 text-center">🧪 เจลสไลม์: <span class="text-lime-400 font-bold">${player.materials.slime_gel || 0}</span></div>
+                            <div class="p-1.5 bg-gray-950 rounded border border-gray-800 text-center">⛏️ แร่เหล็ก: <span class="text-gray-300 font-bold">${player.materials.iron_ore || 0}</span></div>
+                            <div class="p-1.5 bg-gray-950 rounded border border-gray-800 text-center">🔮 แก่นแท้เงา: <span class="text-purple-400 font-bold">${player.materials.shadow_essence || 0}</span></div>
+                            <div class="p-1.5 bg-gray-950 rounded border border-gray-800 text-center">🐉 เกล็ดมังกร: <span class="text-red-400 font-bold">${player.materials.dragonshell || 0}</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Crafting Recipes -->
+                    <div class="flex flex-col gap-2">
+                        ${CRAFTING_RECIPES.map(rec => `
+                            <div class="p-3 bg-gray-900 border border-gray-800 rounded-lg flex justify-between items-center">
+                                <div>
+                                    <div class="font-bold text-amber-200 text-xs">${rec.name}</div>
+                                    <div class="text-[10px] text-gray-400">${rec.result.desc}</div>
+                                    <div class="text-[10px] text-amber-400/80 mt-1">ต้องการ: ${Object.keys(rec.req).map(k => `${k} x${rec.req[k]}`).join(', ')}</div>
+                                </div>
+                                <button onclick="craftItem('${rec.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-black text-xs font-bold rounded active:scale-95 transition shrink-0">คราฟต์</button>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <button onclick="showDropInfoModal()" class="w-full py-2 bg-gray-800 border border-amber-500/40 text-amber-300 text-xs font-bold rounded">
+                        📖 ดูสมุดสูตร & แหล่งดร็อปวัตถุดิบมอนสเตอร์
+                    </button>
+                </div>
+            `;
+        }
+
+        window.craftItem = function(recId) {
+            const rec = CRAFTING_RECIPES.find(r => r.id === recId);
+            if (!rec) return;
+
+            // Check Requirements
+            let canCraft = true;
+            Object.keys(rec.req).forEach(k => {
+                if ((player.materials[k] || 0) < rec.req[k]) canCraft = false;
+            });
+
+            if (!canCraft) {
+                showModal(`
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">❌</div>
+                        <h3 class="text-base font-bold text-red-500 mb-2">วัตถุดิบไม่เพียงพอ!</h3>
+                        <p class="text-xs text-gray-300 mb-4">คุณขาดวัตถุดิบบางอย่างในการคราฟต์ไอเทมชิ้นนี้</p>
+                        <button onclick="closeModal()" class="w-full py-2 bg-gray-800 text-gray-300 rounded">ตกลง</button>
+                    </div>
+                `);
+                return;
+            }
+
+            sfx('victory');
+            // Deduct
+            Object.keys(rec.req).forEach(k => {
+                player.materials[k] -= rec.req[k];
+            });
+
+            // Add Item
+            player.inventory.push(rec.result);
+            saveGame();
+
+            showModal(`
+                <div class="text-center">
+                    <div class="text-3xl mb-2">✨</div>
+                    <h3 class="text-base font-bold text-amber-400 mb-2">คราฟต์สำเร็จ!</h3>
+                    <p class="text-xs text-gray-300 mb-4">คุณได้รับ <strong>${rec.result.item}</strong> เพิ่มในกระเป๋าแล้ว</p>
+                    <button onclick="closeModal()" class="w-full py-2 bg-amber-600 text-black font-bold rounded">ตกลง</button>
+                </div>
+            `);
+
+            renderCraftingTab(document.getElementById('main-content'));
+        };
+
+        function showDropInfoModal() {
+            showModal(`
+                <div>
+                    <h3 class="text-base font-bold text-amber-400 text-center mb-3">📖 แหล่งดร็อปวัตถุดิบ</h3>
+                    <div class="flex flex-col gap-2 text-xs max-h-60 overflow-y-auto">
+                        <div class="p-2 bg-gray-900 rounded border border-gray-800">🌱 <strong>สมุนไพร/เจลสไลม์:</strong> ดร็อปจาก สไลม์เขียว / สปอร์พิษ</div>
+                        <div class="p-2 bg-gray-900 rounded border border-gray-800">🌸 <strong>ดอกไม้เวท:</strong> ดร็อปจาก สปอร์พิษ / เงาพรายวิญญาณ</div>
+                        <div class="p-2 bg-gray-900 rounded border border-gray-800">⛏️ <strong>แร่เหล็ก:</strong> ดร็อปจาก โบลด์เหล็ก / มิมิก</div>
+                        <div class="p-2 bg-gray-900 rounded border border-gray-800">🔮 <strong>แก่นแท้เงา:</strong> ดร็อปจาก เงาพรายวิญญาณ</div>
+                        <div class="p-2 bg-gray-900 rounded border border-gray-800">🐉 <strong>เกล็ดมังกร:</strong> ดร็อปจาก แอสตารอท (มังกรไฟ)</div>
+                    </div>
+                    <button onclick="closeModal()" class="w-full mt-4 py-2 bg-gray-800 text-gray-300 font-bold rounded">ปิดหน้าต่าง</button>
+                </div>
+            `);
+        }
+
+        function renderGuildTab(container) {
+            const isEligible = player.level >= 15;
+            const currentBaseClass = player.class;
+            const promOptions = PROMOTIONS[currentBaseClass];
+
+            container.innerHTML = `
+                <div class="flex flex-col gap-3">
+                    <div class="p-3 bg-gray-900 border border-fantasy-gold rounded-lg flex items-center gap-3">
+                        <div class="text-3xl">🏛️</div>
+                        <div>
+                            <h3 class="text-base font-bold text-amber-400">สมาคมเปลี่ยนอาชีพขั้นสูง</h3>
+                            <p class="text-xs text-gray-400">เลเวล 15 ขึ้นไป เพื่อเลื่อนขั้นเป็น 12 อาชีพไฮคลาส</p>
+                        </div>
+                    </div>
+
+                    ${player.promotedClass ? `
+                        <div class="p-4 bg-amber-950/30 border border-amber-500 rounded-lg text-center">
+                            <div class="text-xs text-amber-400 font-bold">อาชีพปัจจุบันของคุณ</div>
+                            <div class="text-lg font-bold text-amber-300 mt-1">${player.promotedClass.name}</div>
+                            <p class="text-xs text-gray-400 mt-1">คุณได้เลื่อนขั้นอาชีพสูงสุดในสมาคมเรียบร้อยแล้ว!</p>
+                        </div>
+                    ` : `
+                        <div class="p-3 bg-gray-900 border border-gray-800 rounded-lg">
+                            <div class="text-xs font-bold ${isEligible ? 'text-green-400' : 'text-red-400'} mb-2">
+                                ${isEligible ? '✅ คุณมีเลเวลถึงกำหนดแล้ว! เลือกสายอาชีพ:' : `🔒 ต้องใช้เลเวล 15 (เลเวลปัจจุบัน: ${player.level})`}
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                ${promOptions.map(p => `
+                                    <div class="p-3 bg-gray-950 border border-gray-800 rounded-lg flex justify-between items-center">
+                                        <div>
+                                            <div class="font-bold text-amber-300 text-xs">${p.name}</div>
+                                            <div class="text-[10px] text-gray-400">สกิล: ${p.skill.name} (${p.skill.desc})</div>
+                                        </div>
+                                        <button onclick="promoteClass('${p.id}')" ${!isEligible ? 'disabled' : ''} class="px-3 py-1.5 ${isEligible ? 'bg-amber-500 hover:bg-amber-400 text-black' : 'bg-gray-800 text-gray-600'} text-xs font-bold rounded active:scale-95 transition">
+                                            เปลี่ยนอาชีพ
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        window.promoteClass = function(promId) {
+            const promList = PROMOTIONS[player.class];
+            const target = promList.find(p => p.id === promId);
+            if (!target) return;
+
+            sfx('victory');
+            player.promotedClass = target;
+            player.atk = Math.floor(player.atk * target.atkMul);
+            player.def = Math.floor(player.def * target.defMul);
+            player.maxHp = Math.floor(player.maxHp * target.hpmul);
+            player.hp = player.maxHp;
+            player.maxMp = Math.floor(player.maxMp * target.mpmul);
+            player.mp = player.maxMp;
+
+            saveGame();
+            updateTopBar();
+
+            showModal(`
+                <div class="text-center">
+                    <div class="text-4xl mb-2">🌟</div>
+                    <h3 class="text-lg font-bold text-amber-400 mb-2">ยินดีด้วย!</h3>
+                    <p class="text-xs text-gray-300 mb-4">คุณได้รับการเลื่อนขั้นเป็น <strong>${target.name}</strong> สมบูรณ์แล้ว!</p>
+                    <button onclick="closeModal(); switchTab('guild');" class="w-full py-2 bg-amber-600 text-black font-bold rounded">ตกลง</button>
+                </div>
+            `);
+        };
+
+        function renderInventoryTab(container) {
+            container.innerHTML = `
+                <div class="flex flex-col gap-3">
+                    <div class="p-3 bg-gray-900 border border-fantasy-border rounded-lg text-center">
+                        <h3 class="text-base font-bold text-amber-400">🎒 กระเป๋าเดินทาง</h3>
+                        <p class="text-xs text-gray-400">จัดการไอเทมใช้งานและอุปกรณ์สวมใส่</p>
+                    </div>
+
+                    ${player.inventory.length === 0 ? `
+                        <div class="p-8 text-center text-xs text-gray-500 border border-dashed border-gray-800 rounded-lg">
+                            กระเป๋าว่างเปล่า ออกผจญภัยหรือคราฟต์เพื่อรับไอเทม!
+                        </div>
+                    ` : `
+                        <div class="grid grid-cols-1 gap-2">
+                            ${player.inventory.map((item, idx) => `
+                                <div class="p-2.5 bg-gray-900 border border-gray-800 rounded flex justify-between items-center text-xs">
+                                    <div>
+                                        <div class="font-bold text-amber-200">${item.item}</div>
+                                        <div class="text-[10px] text-gray-400">${item.desc}</div>
+                                    </div>
+                                    <button onclick="useInventoryItem(${idx})" class="px-3 py-1 bg-green-700 hover:bg-green-600 text-white font-bold rounded text-[11px]">
+                                        ใช้งาน
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        window.useInventoryItem = function(index) {
+            const item = player.inventory[index];
+            if (!item) return;
+
+            sfx('heal');
+            if (item.item.includes('HP')) {
+                player.hp = Math.min(player.maxHp, player.hp + 100);
+            } else if (item.item.includes('MP')) {
+                player.mp = Math.min(player.maxMp, player.mp + 80);
+            } else if (item.atk) {
+                player.atk += item.atk;
+            } else if (item.def) {
+                player.def += item.def;
+            }
+
+            player.inventory.splice(index, 1);
+            saveGame();
+            renderInventoryTab(document.getElementById('main-content'));
+        };
+
+        function showModal(htmlContent) {
+            const container = document.getElementById('modal-container');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = htmlContent;
+            container.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            sfx('click');
+            document.getElementById('modal-container').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
